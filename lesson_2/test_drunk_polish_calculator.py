@@ -7,10 +7,10 @@ def test_op_plus():
     x = 4
     y = 2
     expected_result = 6
-    
+
     # when
     result = op_plus(x, y)
-    
+
     # then
     assert result == expected_result
     assert op_plus(-5, 10) == 5
@@ -37,10 +37,10 @@ def test_op_multiply():
     x = 4
     y = 5
     expected_result = 20
-    
+
     # when
     result = op_multiply(x, y)
-    
+
     # then
     assert result == expected_result
     assert op_multiply(-5, 10) == -50
@@ -52,10 +52,10 @@ def test_op_divide():
     x = 10
     y = 2
     expected_result = 5
-    
+
     # when
     result = op_divide(x, y)
-    
+
     # then
     assert result == expected_result
     assert op_divide(10, -5) == -2
@@ -67,9 +67,9 @@ def test_integration():
     input_string = "2 3 +"
     expected_output = "Expression with space delimiter:5.0\n"
 
-    #when
+    # when
     process = subprocess.Popen(['python3', 'drunk_polish_calculator.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     output, _ = process.communicate(input=input_string.encode())
 
-    #then
+    # then
     assert output.decode() == expected_output
