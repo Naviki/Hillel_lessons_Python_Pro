@@ -1,6 +1,5 @@
-from drunk_polish_calculator import op_plus, op_divide, op_minus, op_multiply, main
+from drunk_polish_calculator import op_plus, op_divide, op_minus, op_multiply
 from unittest import mock
-import pytest
 
 
 def test_op_plus():
@@ -63,16 +62,12 @@ def test_op_divide():
     assert op_divide(0, 5) == 0.0
 
 
-@pytest.mark.parametrize('input_string, expected_output', [
-    ('2 3 +', 'Expression with space delimiter: 5.0'),
-    ('5 3 -', 'Expression with space delimiter: -2.0'),
-    ('4 2 *', 'Expression with space delimiter: 8.0'),
-    ('10 2 /', 'Expression with space delimiter: 5.0')
-])
 def test_integration(input_string, expected_output, monkeypatch):
     monkeypatch.setattr('builtins.input', lambda _: input_string)
+    monkeypatch.setattr('sys.stdout', mock.MagicMock())
 
-    with mock.patch('sys.stdout', new=mock.MagicMock()) as mock_stdout:
-        main()
-        assert mock_stdout.getvalue().strip() == expected_output
-        
+    import drunk_polish_calculator
+    drunk_polish_calculator.main()
+
+    output = sys.stdout.getvalue()
+    assert output == expected_output
