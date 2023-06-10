@@ -22,14 +22,14 @@ def test_op_minus():
     # given
     x = 5
     y = 2
-    expected_result = 3
+    expected_result = -3
 
     # when
     result = op_minus(x, y)
 
     # then
     assert result == expected_result
-    assert op_minus(10, -5) == 15
+    assert op_minus(10, -5) == -15
     assert op_minus(0, 0) == 0
 
 
