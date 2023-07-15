@@ -1,0 +1,28 @@
+{% extends 'main/layout.html' %}
+
+{% block title %}Список карток{% endblock %}
+
+{% block content %}
+<div class="features">
+    <h1>Список карток</h1>
+
+    <table>
+        <tr>
+            <th>Номер картки</th>
+            <th>Дата закінчення сроку дії</th>
+            <th>CVV код</th>
+            <th>Дата видачі</th>
+            <th>ID власника</th>
+        </tr>
+        {% for card in cards %}
+        <tr>
+            <td>{{ card.PAN }}</td>
+            <td>{{ card.expiration_date }}</td>
+            <td>{{ card.CVV }}</td>
+            <td>{{ card.issue_date }}</td>
+            <td>{{ card.owner_id }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
