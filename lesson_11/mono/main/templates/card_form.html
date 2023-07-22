@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% if card %}Edit Card{% else %}Create Card{% endif %}</title>
+</head>
+<body>
+<h1>{% if card %}Edit Card{% else %}Create Card{% endif %}</h1>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="{% if card %}Update{% else %}Create{% endif %} Card">
+</form>
+</body>
+</html>
