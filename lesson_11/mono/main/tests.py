@@ -3,12 +3,12 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import Card
 
+
 class CardTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'test@example.com', 'testpassword')
         self.client.force_authenticate(user=self.user)
 
-    # Given
     def test_create_card(self):
         data = {
             'pan': '1111222233334444',
@@ -24,10 +24,24 @@ class CardTests(APITestCase):
         # Then
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Card.objects.count(), 1)
-        self.assertEqual(Card.objects.get().pan, '1111222233334444')
-        self.assertEqual(Card.objects.get().owner, self.user)
 
-    # Given
+        # Verify data in the database
+        card = Card.objects.get()
+        self.assertEqual(card.pan, '1111222233334444')
+        self.assertEqual(card.expiration_date, '08/2025')
+        self.assertEqual(card.cvv, '123')
+        self.assertEqual(str(card.issue_date), '2023-07-22')
+        self.assertEqual(card.card_name, 'My Card')
+        self.assertEqual(card.owner, self.user)
+
+        # Verify response data
+        self.assertEqual(response.data['pan'], '1111222233334444')
+        self.assertEqual(response.data['expiration_date'], '08/2025')
+        self.assertEqual(response.data['cvv'], '123')
+        self.assertEqual(response.data['issue_date'], '2023-07-22')
+        self.assertEqual(response.data['card_name'], 'My Card')
+        self.assertEqual(response.data['owner'], self.user.id)
+
     def test_freeze_card(self):
         card = Card.objects.create(pan='1111222233334444', expiration_date='08/2025', cvv='123',
                                    issue_date='2023-07-22', owner=self.user)
@@ -38,8 +52,8 @@ class CardTests(APITestCase):
         # Then
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(Card.objects.get(pk=card.pk).is_frozen)
+        self.assertEqual(response.data['is_frozen'], True)
 
-    # Given
     def test_unfreeze_card(self):
         card = Card.objects.create(pan='1111222233334444', expiration_date='08/2025', cvv='123',
                                    issue_date='2023-07-22', owner=self.user)
@@ -52,8 +66,8 @@ class CardTests(APITestCase):
         # Then
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(Card.objects.get(pk=card.pk).is_frozen)
+        self.assertEqual(response.data['is_frozen'], False)
 
-    # Given
     def test_view_own_cards(self):
         Card.objects.create(pan='1111222233334444', expiration_date='08/2025', cvv='123',
                             issue_date='2023-07-22', owner=self.user)
@@ -71,4 +85,10 @@ class CardTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
         self.assertEqual(response.data[0]['pan'], '1111222233334444')
+        self.assertEqual(response.data[0]['expiration_date'], '08/2025')
+        self.assertEqual(response.data[0]['cvv'], '123')
+        self.assertEqual(response.data[0]['issue_date'], '2023-07-22')
+        self.assertEqual(response.data[0]['card_name'], '')
+        self.assertEqual(response.data[0]['is_frozen'], False)
+        self.assertEqual(response.data[0]['owner'], self.user.id)
         self.assertEqual(response.data[1]['pan'], '5555666677778888')
