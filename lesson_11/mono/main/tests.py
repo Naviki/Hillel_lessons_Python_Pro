@@ -2,7 +2,8 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import Card
-
+from datetime import timedelta
+from django.utils import timezone
 
 class CardTests(APITestCase):
     def setUp(self):
@@ -92,3 +93,36 @@ class CardTests(APITestCase):
         self.assertEqual(response.data[0]['is_frozen'], False)
         self.assertEqual(response.data[0]['owner'], self.user.id)
         self.assertEqual(response.data[1]['pan'], '5555666677778888')
+
+    def test_activate_card(self):
+        card = Card.objects.create(pan='1111222233334444', expiration_date='08/2025', cvv='123',
+                                   issue_date='2023-07-22', owner=self.user)
+
+        # When
+        response = self.client.patch(f'/cards/{card.pk}/activate/')
+
+        # Then
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(Card.objects.get(pk=card.pk).is_active)
+        self.assertEqual(response.data['is_active'], True)
+
+    def test_auto_freeze_expired_cards(self):
+        # Create a card that will expire in the past (yesterday)
+        past_expiration = timezone.now() - timedelta(days=1)
+        expired_card = Card.objects.create(pan='1234567890123456', expiration_date=past_expiration.strftime('%m/%Y'),
+                                           cvv='789',
+                                           issue_date='2023-07-22', owner=self.user)
+
+        # Create a card that will expire in the future (tomorrow)
+        future_expiration = timezone.now() + timedelta(days=1)
+        future_card = Card.objects.create(pan='2345678901234567', expiration_date=future_expiration.strftime('%m/%Y'),
+                                          cvv='123',
+                                          issue_date='2023-07-22', owner=self.user)
+
+        # When
+        response = self.client.get('/cards/')  # Trigger the automatic freeze task
+
+        # Then
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(Card.objects.get(pk=expired_card.pk).is_frozen)
+        self.assertFalse(Card.objects.get(pk=future_card.pk).is_frozen)

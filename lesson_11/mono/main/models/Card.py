@@ -1,5 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
+from celery import shared_task
+
 
 class CardManager(models.Manager):
     def is_valid(self, pan):
@@ -19,3 +21,10 @@ class Card(models.Model):
     is_frozen = models.BooleanField(default=False)
 
     objects = CardManager()
+
+    @shared_task
+    def activate(self):
+        from time import sleep
+        sleep(120)  # Очікуємо 2 хвилини
+        self.is_frozen = False
+        self.save()

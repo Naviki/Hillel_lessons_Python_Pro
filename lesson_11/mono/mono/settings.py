@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from celery import Celery
+from django.conf import settings
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,9 +41,11 @@ DJANGO_INTERNAL_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'celery',
+    'celery_beat',
 ]
 
-DJANGO_THIRD_PARTY_APPS = ['rest_framework']  # Виправлено з 'rest_frameworks'
+DJANGO_THIRD_PARTY_APPS = ['rest_framework']
 
 PROJECT_APPS = ['main.apps.MainConfig']
 
@@ -86,7 +91,7 @@ DATABASES = {
         'NAME': os.environ.get('DB_NAME', 'card_base'),
         'USER': os.environ.get('DB_USER', 'Guest_user'),
         'PASSWORD': os.environ.get('DB_PASSWORD', '1488'),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'HOST': '172.17.0.2',
         'PORT': os.environ.get('DB_PORT', '5432')
     }
 }
@@ -144,4 +149,18 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly"
     ]
+}
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mono.settings')
+
+app = Celery('mono')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL для Redis
+CELERY_BEAT_SCHEDULE = {
+    'freeze_expired_cards': {
+        'task': 'main.tasks.freeze_expired_cards',
+        'schedule': timedelta(hours=24),  # Заморожувати щодня
+    },
 }

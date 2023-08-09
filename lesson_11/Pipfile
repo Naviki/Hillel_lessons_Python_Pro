@@ -8,6 +8,9 @@ djangorestframework = "*"
 django = "*"
 psycopg2-binary = "*"
 requests = "*"
+django-celery-beat = "*"
+celery = "*"
+redis = "*"
 
 [dev-packages]
 
