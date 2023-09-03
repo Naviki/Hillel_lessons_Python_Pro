@@ -1,8 +1,9 @@
 import time
 import asyncio
-
+import functools
 
 def function_timer(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
@@ -13,6 +14,7 @@ def function_timer(func):
     return wrapper
 
 def function_async_timer(func):
+    @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.time()
         result = await func(*args, **kwargs)
@@ -22,13 +24,22 @@ def function_async_timer(func):
         return result
     return wrapper
 
-@function_timer
-def reader_funcion():
+def universal_timer(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if asyncio.iscoroutinefunction(func):
+            return function_async_timer(func)(*args, **kwargs)
+        else:
+            return function_timer(func)(*args, **kwargs)
+    return wrapper
+@universal_timer
+def reader_function():
     time.sleep(4)
 
-@function_async_timer
+@universal_timer
 async def async_reader_function():
     await asyncio.sleep(2)
 
 if __name__ == "__main__":
+    reader_function()
     asyncio.run(async_reader_function())
