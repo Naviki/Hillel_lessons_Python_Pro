@@ -1,85 +1,75 @@
-from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, DECIMAL
-from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import MetaData, Table, Column, String, TIMESTAMP, ForeignKey, DateTime, Float, Boolean, Integer, JSON
+from sqlalchemy.dialects.postgresql import UUID
 
-from MeetUpSplitter.config import DB_CONFIG
+from datetime import datetime
+import uuid
 
-DATABASE_URL = f"postgresql://{DB_CONFIG['USER']}:{DB_CONFIG['PASSWORD']}@{DB_CONFIG['HOST']}:{DB_CONFIG['PORT']}/{DB_CONFIG['NAME']}"
+metadate = MetaData()
 
-engine = create_engine(DATABASE_URL)
+role = Table(
+    'role',
+    metadate,
+    Column("id", Integer, primary_key=True),
+    Column("name", String, nullable=False),
+    Column("permissions", JSON),
+)
 
-Base = declarative_base()
+user = Table(
+    'user',
+    metadate,
+    Column('id', UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column('email', String(length=255), unique=True, nullable=False),
+    Column('username', String(length=255), unique=True, nullable=False),
+    Column('hashed_password', String(length=255), nullable=False),
+    Column('registered_at', TIMESTAMP, default=datetime.utcnow),
+    Column("role_id", Integer, ForeignKey(role.c.id)),
+    Column("is_active", Boolean, default=True, nullable=False),
+    Column("is_superuser", Boolean, default=False, nullable=False),
+    Column("is_verified", Boolean, default=False, nullable=False),
+)
 
-class User(Base):
-    __tablename__ = 'Users'
 
-    user_id = Column(String, primary_key=True)
-    email = Column(String, unique=True)
-    password = Column(String)
+meeting = Table(
+    'meeting',
+    metadate,
+    Column('id', UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column('place', String(length=255), nullable=False),
+    Column('time', DateTime),
+    Column('user_id', UUID(as_uuid=True), ForeignKey('user.id'), nullable=False),
+)
 
-    meetings = relationship('Meeting', back_populates='creator')
-    comments = relationship('Comment', back_populates='user')
-    purchases = relationship('Purchase', back_populates='user')
-    expense_shares = relationship('ExpenseShare', back_populates='user')
+meeting_participant = Table(
+    'meeting_participant',
+    metadate,
+    Column('id', UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column('meeting_id', UUID(as_uuid=True), ForeignKey('meeting.id'), nullable=False),
+    Column('user_id', UUID(as_uuid=True), ForeignKey('user.id'), nullable=False),
+)
 
-class Meeting(Base):
-    __tablename__ = 'Meetings'
+purchase = Table(
+    'purchase',
+    metadate,
+    Column('id', UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column('meeting_id', UUID(as_uuid=True), ForeignKey('meeting.id'), nullable=False),
+    Column('description', String(length=255), nullable=False),
+    Column('amount', Float, nullable=False),
+)
 
-    meeting_id = Column(String, primary_key=True)
-    place = Column(String)
-    time = Column(DateTime)
-    creator_id = Column(String, ForeignKey('Users.user_id'))
+expense_share = Table(
+    'expense_share',
+    metadate,
+    Column('id', UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column('purchase_id', UUID(as_uuid=True), ForeignKey('purchase.id'), nullable=False),
+    Column('user_id', UUID(as_uuid=True), ForeignKey('user.id'), nullable=False),
+    Column('share_amount', Float, nullable=False),
+)
 
-    creator = relationship('User', back_populates='meetings')
-    participants = relationship('MeetingParticipant', back_populates='meeting')
-    comments = relationship('Comment', back_populates='meeting')
-    purchases = relationship('Purchase', back_populates='meeting')
+comment = Table(
+    'comment',
+    metadate,
+    Column('id', UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
+    Column('meeting_id', UUID(as_uuid=True), ForeignKey('meeting.id'), nullable=False),
+    Column('user_id', UUID(as_uuid=True), ForeignKey('user.id'), nullable=False),
+    Column('content', String, nullable=False),
+)
 
-class MeetingParticipant(Base):
-    __tablename__ = 'Meeting_Participants'
-
-    participant_id = Column(String, primary_key=True)
-    meeting_id = Column(String, ForeignKey('Meetings.meeting_id'))
-    user_id = Column(String, ForeignKey('Users.user_id'))
-
-    meeting = relationship('Meeting', back_populates='participants')
-    user = relationship('User', back_populates='meetings_attended')
-
-class Purchase(Base):
-    __tablename__ = 'Purchases'
-
-    purchase_id = Column(String, primary_key=True)
-    meeting_id = Column(String, ForeignKey('Meetings.meeting_id'))
-    description = Column(String)
-    amount = Column(DECIMAL)
-
-    meeting = relationship('Meeting', back_populates='purchases')
-    user = relationship('User', back_populates='purchases')
-    expense_shares = relationship('ExpenseShare', back_populates='purchase')
-
-class ExpenseShare(Base):
-    __tablename__ = 'Expense_Shares'
-
-    distribution_id = Column(String, primary_key=True)
-    purchase_id = Column(String, ForeignKey('Purchases.purchase_id'))
-    user_id = Column(String, ForeignKey('Users.user_id'))
-    share_amount = Column(DECIMAL)
-
-    user = relationship('User', back_populates='expense_shares')
-    purchase = relationship('Purchase', back_populates='expense_shares')
-
-class Comment(Base):
-    __tablename__ = 'Comments'
-
-    comment_id = Column(String, primary_key=True)
-    meeting_id = Column(String, ForeignKey('Meetings.meeting_id'))
-    user_id = Column(String, ForeignKey('Users.user_id'))
-    content = Column(String)
-
-    meeting = relationship('Meeting', back_populates='comments')
-    user = relationship('User', back_populates='comments')
-
-Base.metadata.create_all(engine)
-
-Session = sessionmaker(bind=engine)
-session = Session()
